@@ -3,231 +3,208 @@ import os, json
 import pandas as pd
 from datetime import datetime, date, time, timedelta
 
-# ─── CONFIG ─────────────────────────────────────────────────────────────────
-DATA_FILE    = "habits_data.json"
-UPLOAD_DIR   = "uploads"
-CUTOFF_HOUR  = 4   # anything before 4 AM counts for previous day
-ACTIVITIES   = ["Sleep", "Workout", "Studying", "Anki"]
+# ── CONFIG ─────────────────────────────────────────────────────────────────────
+DATA_FILE     = "habits_data.json"
+UPLOAD_DIR    = "uploads"
+CUTOFF_HOUR   = 4   # anything before 4 AM counts for previous day
+ACTIVITIES    = ["Sleep", "Workout", "Studying", "Anki"]
 DEFAULT_GOALS = {
-    "Sleep": 7.0,      # hours per day (float)
-    "Workout": 150,    # minutes per week (int)
-    "Studying": 10.0,  # hours per week (float)
-    "Anki": 1          # sessions per day (int)
+    "Sleep": 7.0,       # hours per day
+    "Workout": 150.0,   # minutes per week
+    "Studying": 10.0,   # hours per week
+    "Anki": 1.0         # sessions per day
 }
 
-# ensure upload directory exists
+# ensure persistence path exists
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# ─── I/O HELPERS ─────────────────────────────────────────────────────────────
+# ── DATA I/O ───────────────────────────────────────────────────────────────────
 def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r") as f:
             return json.load(f)
-    return {"players": {}}
+    return {"users": {}}
+
 
 def save_data(db):
     with open(DATA_FILE, "w") as f:
         json.dump(db, f, indent=2)
 
-# ─── UTILITIES ─────────────────────────────────────────────────────────────────
+# ── UTILITIES ─────────────────────────────────────────────────────────────────
 def effective_date(ts: datetime) -> date:
+    """Roll timestamp before cutoff back one full day."""
     if ts.time() < time(CUTOFF_HOUR):
         ts = ts - timedelta(days=1)
     return ts.date()
 
-# compute compliance and streaks
-def compute_compliance(pdata):
-    logs = pdata.get("logs", [])
-    goals = pdata.get("goals", DEFAULT_GOALS)
+# compute compliance and streaks (same as before)
+def compute_compliance(user_data):
+    logs = user_data.get("logs", [])
+    goals = user_data.get("goals", DEFAULT_GOALS)
     df = pd.DataFrame(logs)
     if df.empty:
-        # no logs
         comp = {act: 0 for act in ACTIVITIES}
-        sub = {act: 0 for act in ACTIVITIES}
-        return comp, sub, 0
-
-    # parse timestamps to dates
-    df["date"] = pd.to_datetime(df["timestamp"]).apply(effective_date)
+        streak = {act: 0 for act in ACTIVITIES}
+        return comp, streak, 0
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["date"] = df["timestamp"].apply(effective_date)
     today = date.today()
-
-    comp = {}
-    sub = {}
-    # daily habits: Sleep & Anki (7-day window)
+    comp, streak = {}, {}
+    # daily habits
     for act in ["Sleep", "Anki"]:
-        # sub-streak: consecutive days
-        streak = 0
+        # comp % over 7 days
+        met = sum(df[(df["date"] == today - timedelta(days=i)) & (df["activity"] == act)]["value"].sum() >= goals[act] for i in range(7))
+        comp[act] = round(met/7*100, 1)
+        # streak days
+        st_count = 0
         d = today
-        while True:
-            total = df[(df["date"] == d) & (df["activity"] == act)]["value"].sum()
-            if total >= goals[act]:
-                streak += 1
-                d -= timedelta(days=1)
-            else:
-                break
-        sub[act] = streak
-
-        # compliance: percent days met in last 7 days
-        met = sum(
-            1 for i in range(7)
-            if df[(df["date"] == today - timedelta(days=i)) & (df["activity"] == act)]["value"].sum() >= goals[act]
-        )
-        comp[act] = round(met / 7 * 100, 1)
-
-    # weekly habits: Workout & Studying (12-week window)
+        while df[(df["date"] == d) & (df["activity"] == act)]["value"].sum() >= goals[act]:
+            st_count += 1
+            d -= timedelta(days=1)
+        streak[act] = st_count
+    # weekly habits
     for act in ["Workout", "Studying"]:
         week_totals = []
         for w in range(12):
             end = today - timedelta(days=7*w)
             start = end - timedelta(days=6)
-            total = df[(df["date"] >= start) & (df["date"] <= end) & (df["activity"] == act)]["value"].sum()
-            week_totals.append(total)
-        # sub-streak: consecutive weeks
-        streak = 0
-        for val in week_totals:
-            if val >= goals[act]:
-                streak += 1
-            else:
-                break
-        sub[act] = streak
-        comp[act] = round(sum(1 for v in week_totals if v >= goals[act]) / 12 * 100, 1)
-
-    # main streak: consecutive days where Sleep + Anki + workout-week all met
+            s = df[(df["date"] >= start) & (df["date"] <= end) & (df["activity"] == act)]["value"].sum()
+            week_totals.append(s)
+        comp[act] = round(sum(v >= goals[act] for v in week_totals)/12*100, 1)
+        st_count = 0
+        for v in week_totals:
+            if v >= goals[act]: st_count += 1
+            else: break
+        streak[act] = st_count
+    # main streak
     main = 0
     d = today
     while True:
-        ok_sleep = df[(df["date"] == d) & (df["activity"] == "Sleep")]["value"].sum() >= goals["Sleep"]
-        ok_anki  = df[(df["date"] == d) & (df["activity"] == "Anki")]["value"].sum()  >= goals["Anki"]
-        week_mask = (df["date"] >= d - timedelta(days=6)) & (df["date"] <= d)
-        ok_work  = df[week_mask & (df["activity"] == "Workout")]["value"].sum() >= goals["Workout"]
-        if ok_sleep and ok_anki and ok_work:
+        ok1 = df[(df["date"] == d) & (df["activity"] == "Sleep")]["value"].sum() >= goals["Sleep"]
+        ok2 = df[(df["date"] == d) & (df["activity"] == "Anki")]["value"].sum()  >= goals["Anki"]
+        mask = (df["date"] >= d - timedelta(days=6)) & (df["date"] <= d)
+        ok3 = df[mask & (df["activity"] == "Workout")]["value"].sum() >= goals["Workout"]
+        if ok1 and ok2 and ok3:
             main += 1
             d -= timedelta(days=1)
         else:
             break
+    return comp, streak, main
 
-    return comp, sub, main
-
-# ─── APP START ─────────────────────────────────────────────────────────────────
+# ── APP START ─────────────────────────────────────────────────────────────────
 st.set_page_config(page_title="Habits! 🔥🔪", layout="wide")
 db = load_data()
 
-# ─── SIDEBAR: Players & Goals ─────────────────────────────────────────────────
-st.sidebar.header("Players & Goals")
-new_name = st.sidebar.text_input("Add new player:")
-if st.sidebar.button("Create") and new_name.strip():
-    if new_name in db["players"]:
-        st.sidebar.warning(f"Player '{new_name}' already exists.")
-    else:
-        db["players"][new_name] = {"goals": DEFAULT_GOALS.copy(), "logs": []}
-        save_data(db)
-        st.sidebar.success(f"Player '{new_name}' created!")
-
-players = list(db["players"].keys())
-if not players:
-    st.info("Please add a player to get started.")
+# ── AUTH: email login ──────────────────────────────────────────────────────────
+if "email" not in st.session_state:
+    st.sidebar.header("Login")
+    email = st.sidebar.text_input("Enter your email:")
+    if st.sidebar.button("Login") and email:
+        st.session_state.email = email.strip().lower()
+        # create new user if not exist
+        if st.session_state.email not in db["users"]:
+            db["users"][st.session_state.email] = {"goals": DEFAULT_GOALS.copy(), "logs": []}
+            save_data(db)
+        st.experimental_rerun()
     st.stop()
 
-current = st.sidebar.selectbox("Select player", players)
-pdata = db["players"][current]
+# user is logged in
+email = st.session_state.email
+user = db["users"][email]
+st.sidebar.write(f"Logged in as {email}")
+if st.sidebar.button("Logout"):
+    del st.session_state.email
+    st.experimental_rerun()
 
-# customize goals with consistent numeric types
-st.sidebar.subheader("Daily & Weekly Goals")
-for habit, val in pdata["goals"].items():
-    if habit in ["Sleep", "Studying"]:
-        new = st.sidebar.number_input(
-            f"{habit} (hrs {'per day' if habit=='Sleep' else 'per week'})",
-            min_value=0.0,
-            value=float(val),
-            step=0.5,
-        )
+# ── SIDEBAR: Goals ─────────────────────────────────────────────────────────────
+st.sidebar.subheader("Your Goals")
+for act, val in user["goals"].items():
+    if act in ["Sleep", "Studying"]:
+        new = st.sidebar.number_input(f"{act} (hrs/day)" if act=="Sleep" else f"{act} (hrs/wk)",
+                                      min_value=0.0,value=float(val),step=0.5)
     else:
-        # Workout & Anki are integers
-        new = st.sidebar.number_input(
-            f"{habit} ({'min per week' if habit=='Workout' else 'sessions per day'})",
-            min_value=0,
-            value=int(val),
-            step=1,
-        )
-    pdata["goals"][habit] = new
+        new = st.sidebar.number_input(f"{act} ({'sessions/day' if act=='Anki' else 'min/week'})",
+                                      min_value=0,value=int(val),step=1)
+    user["goals"][act] = new
 save_data(db)
 
-# ─── TABS ──────────────────────────────────────────────────────────────────────
-tabs = st.tabs(["📝 Log","📊 Dashboard","💬 Feed","📜 History","🏆 Leaderboard"])
+# ── TABS ───────────────────────────────────────────────────────────────────────
+tabs = st.tabs(["Log","Dashboard","Feed","History","Leaderboard"])
 
-# Tab 1: Log
+# Log Tab
 with tabs[0]:
-    st.header(f"Log Activity for {current}")
-    log_date = st.date_input("Date", value=date.today())
+    st.header(f"Log for {email}")
+    d = st.date_input("Date", date.today())
     act = st.selectbox("Activity", ACTIVITIES)
     if act in ["Sleep", "Studying"]:
-        dur = st.number_input("Duration (hrs)", min_value=0.0, max_value=24.0, value=1.0, step=0.5)
-    elif act == "Anki":
-        dur = st.number_input("Sessions", min_value=0, value=1, step=1)
+        dur = st.number_input("Hours", min_value=0.0,value=0.0,step=0.5)
     else:
-        dur = st.number_input("Duration (min)", min_value=0, value=30, step=5)
-    proof = st.file_uploader("Upload proof (PNG/JPG)", type=["png","jpg","jpeg"])
-    if st.button("Save Log"):
+        dur = st.number_input("Units", min_value=0,value=0,step=1)
+    proof = st.file_uploader("Proof PNG/JPG", type=["png","jpg","jpeg"])
+    if st.button("Save"):
         ts = datetime.now().isoformat()
         path = None
         if proof:
-            fname = f"{current}_{ts.replace(':','-')}_{proof.name}"
-            path = os.path.join(UPLOAD_DIR, fname)
-            with open(path, "wb") as f:
-                f.write(proof.getbuffer())
-        pdata["logs"].append({"timestamp": ts, "activity": act, "value": dur, "proof": path})
+            fn = f"{email}_{ts.replace(':','-')}_{proof.name}"
+            path = os.path.join(UPLOAD_DIR,fn)
+            with open(path,"wb") as f: f.write(proof.getbuffer())
+        user.setdefault("logs",[]).append({
+            "timestamp": ts,
+            "activity": act,
+            "value": dur,
+            "proof": path
+        })
         save_data(db)
-        st.success("Log saved!")
+        st.success("Saved")
         st.experimental_rerun()
 
-# Tab 2: Dashboard
+# Dashboard Tab
 with tabs[1]:
-    st.header(f"{current}'s Dashboard")
-    comp, sub, main = compute_compliance(pdata)
+    st.header("Your Dashboard")
+    comp, streaks, main = compute_compliance(user)
     st.metric("Main streak (days)", main)
     cols = st.columns(len(ACTIVITIES))
     for i, act in enumerate(ACTIVITIES):
-        pct = f"{comp.get(act,0)}%"
-        cols[i].metric(act, pct, sub.get(act,0))
+        cols[i].metric(act, f"{comp.get(act,0)}%", streaks.get(act,0))
 
-# Tab 3: Feed
+# Feed Tab
 with tabs[2]:
     st.header("Social Feed")
     rows = []
-    for p, rec in db["players"].items():
-        for log in rec["logs"]:
-            rows.append({**log, "player": p, "date": effective_date(datetime.fromisoformat(log["timestamp"]))})
+    for u_email, u_data in db["users"].items():
+        for log in u_data.get("logs",[]):
+            rows.append({**log, "user": u_email,
+                         "date": effective_date(datetime.fromisoformat(log["timestamp"]))})
     df = pd.DataFrame(rows)
     if df.empty:
-        st.write("No activity yet.")
+        st.write("No activity.")
     else:
-        for _, r in df.sort_values("date", ascending=False).head(20).iterrows():
-            st.markdown(f"**{r['player']}** did {r['activity']} — {r['value']}")
-            if r.get('proof'):
-                st.image(r['proof'], width=200)
+        df = df.sort_values("date",ascending=False)
+        for _,r in df.head(20).iterrows():
+            st.markdown(f"**{r['user']}** did {r['activity']} — {r['value']}")
+            if r.get("proof"): st.image(r['proof'],width=200)
 
-# Tab 4: History
+# History Tab
 with tabs[3]:
     st.header("History")
-    hist = st.date_input("Select date", value=date.today(), key="h")
+    hist = st.date_input("Select date", date.today(), key="hd")
     rows = []
-    for p, rec in db["players"].items():
-        for log in rec["logs"]:
-            if effective_date(datetime.fromisoformat(log["timestamp"])) == hist:
-                rows.append({**log, "player": p})
+    for u_email,u_data in db["users"].items():
+        for l in u_data.get("logs",[]):
+            if effective_date(datetime.fromisoformat(l["timestamp"])) == hist:
+                rows.append({**l,"user":u_email})
     if not rows:
-        st.write("No logs on that date.")
+        st.write("No logs on this date.")
     else:
         for r in rows:
-            st.markdown(f"**{r['player']}**: {r['activity']} = {r['value']}")
-            if r.get('proof'):
-                st.image(r['proof'], width=200)
+            st.markdown(f"**{r['user']}**: {r['activity']}={r['value']}")
+            if r.get('proof'): st.image(r['proof'],width=200)
 
-# Tab 5: Leaderboard
+# Leaderboard Tab
 with tabs[4]:
     st.header("Leaderboard")
     board = []
-    for p, rec in db["players"].items():
-        _, _, m = compute_compliance(rec)
-        board.append({"player": p, "Main 🔥": m})
-    lb = pd.DataFrame(board).sort_values("Main 🔥", ascending=False)
-    st.table(lb)
+    for u_email,u_data in db["users"].items():
+        _,_,ms = compute_compliance(u_data)
+        board.append({"user":u_email,"Main":ms})
+    st.table(pd.DataFrame(board).sort_values("Main",ascending=False))
