@@ -157,7 +157,7 @@ tabs = st.tabs(['📝 Log','📊 Dashboard','💬 Feed','📜 History','🏆 Lea
 # Log Tab
 with tabs[0]:
     st.header('Log Activity')
-    log_date = st.date_input('Date', date.today())
+    log_date = st.date_input('Date', date.today(), key='log_date')
     act = st.selectbox('Activity', ACTIVITIES)
     if act in ['Sleep','Studying']:
         val = st.number_input('Hours', min_value=0.0, value=0.0, step=0.5)
@@ -195,7 +195,7 @@ with tabs[2]:
 # History
 with tabs[3]:
     st.header('History')
-    sel = st.date_input('Date', date.today())
+    sel = st.date_input('Date', date.today(), key='history_date')
     hist = [(ue,l) for ue,ud in db['users'].items() for l in ud.get('logs',[]) if effective_date(datetime.fromisoformat(l['timestamp']))==sel]
     if not hist: st.write('No logs.')
     else:
