@@ -1,0 +1,14 @@
+# Ignore Python venv
+.venv/
+
+# Ignore data & uploads
+habits_data.json
+uploads/
+
+# Bytecode & caches
+__pycache__/
+*.py[cod]
+
+# Editor & OS junk
+.DS_Store
+Thumbs.db
