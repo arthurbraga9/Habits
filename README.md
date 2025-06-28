@@ -1,4 +1,3 @@
-````markdown
 # Habits! 🔥🔪
 
 A social, proof-based habit tracker built with Streamlit.  
@@ -11,11 +10,14 @@ Track **Sleep**, **Workout**, **Studying** and **Anki** sessions, upload proof s
 - **Multi-player**: Each user creates a profile and sets their own goals.  
 - **Daily Goals**: Customize hours/day for Sleep, Workout, Studying; sessions/day for Anki.  
 - **Flexible Logging**: Logs before 4 AM roll into the previous day.  
-- **Proof Uploads**: Require a screenshot (Garmin/Strava, app snapshot, etc.) for each log.  
-- **Exceptions**: Pre-declare “Illness” or “Death” days to preserve streaks.  
-- **Sub-Streaks & Main Streak**: Track continuous weeks of compliance for Workout, Anki, Studying (Anki counts as Studying), and an overall “Main 🔥” streak requiring all three.  
-- **Dashboard**: Line chart of weekly minutes per activity over the last 12 weeks.  
-- **Social Feed**: View recent logs from people you follow; “Cheer” others’ logs.  
+- **Proof Uploads**: Require a screenshot (Garmin/Strava, app snapshot, etc.) for each log.
+- **Exceptions**: Pre-declare “Illness” or “Death” days to preserve streaks.
+- **Profiles & Following**: Set a display name and choose who to follow.
+- **Cheer Logs**: Encourage friends with a one-click “Cheer” on each entry.
+- **Sub-Streaks & Main Streak**: Track continuous weeks of compliance for Workout, Anki, Studying (Anki counts as Studying), and an overall “Main 🔥” streak requiring all three.
+- **Dashboard**: Line chart of weekly minutes per activity over the last 12 weeks.
+- **Social Feed**: View recent logs from people you follow; “Cheer” others’ logs.
+- **CSV Export**: Download your full log history from the dashboard.
 - **History View**: Select any past date to see everyone’s logs.  
 - **Leaderboard**: Rank users by their current Main streak.
 
@@ -35,7 +37,7 @@ Track **Sleep**, **Workout**, **Studying** and **Anki** sessions, upload proof s
    ```bash
    git clone https://github.com/your-username/habits-tracker.git
    cd habits-tracker
-````
+   ```
 
 2. **Create & activate** a virtual environment:
 
@@ -135,5 +137,5 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 **Build habits, crush goals, and keep each other accountable. Let’s make every streak 🔥!**
 
-```
-```
+
+

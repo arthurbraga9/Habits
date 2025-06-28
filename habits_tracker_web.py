@@ -1,6 +1,7 @@
 import streamlit as st
 import os, json
 import pandas as pd
+import uuid
 from datetime import datetime, date, time, timedelta
 
 # ── CONFIG ─────────────────────────────────────────────────────────────────────
@@ -37,10 +38,20 @@ def load_data():
     # initialize each user
     for email, u in users.items():
         if not isinstance(u, dict):
-            users[email] = {'goals': DEFAULT_GOALS.copy(), 'logs': []}
+            users[email] = {
+                'name': email.split('@')[0],
+                'goals': DEFAULT_GOALS.copy(),
+                'logs': [],
+                'follows': []
+            }
         else:
+            u.setdefault('name', email.split('@')[0])
             u.setdefault('goals', DEFAULT_GOALS.copy())
             u.setdefault('logs', [])
+            u.setdefault('follows', [])
+            for l in u['logs']:
+                l.setdefault('cheers', 0)
+                l.setdefault('id', uuid.uuid4().hex)
     data['users'] = users
     return data
 
@@ -129,17 +140,31 @@ if 'email' not in st.session_state:
         email = login_email.strip().lower()
         st.session_state.email = email
         if email not in db['users']:
-            db['users'][email] = {'goals': DEFAULT_GOALS.copy(), 'logs': []}
+            db['users'][email] = {
+                'name': email.split('@')[0],
+                'goals': DEFAULT_GOALS.copy(),
+                'logs': [],
+                'follows': []
+            }
             save_data(db)
         st.rerun()
     st.stop()
 email = st.session_state.email
 user = db['users'].get(email)
 if user is None:
-    db['users'][email] = {'goals': DEFAULT_GOALS.copy(), 'logs': []}
+    db['users'][email] = {
+        'name': email.split('@')[0],
+        'goals': DEFAULT_GOALS.copy(),
+        'logs': [],
+        'follows': []
+    }
     user = db['users'][email]
     save_data(db)
-st.sidebar.write(f'Logged in: {email}')
+st.sidebar.write(f"Logged in: {email}")
+user['name'] = st.sidebar.text_input('Name', user.get('name',''))
+other_users = [e for e in db['users'] if e != email]
+user['follows'] = st.sidebar.multiselect('Follow', other_users, default=user.get('follows', []))
+save_data(db)
 if st.sidebar.button('Logout'):
     del st.session_state.email
     st.rerun()
@@ -170,8 +195,16 @@ with tabs[0]:
         if proof:
             fn = f"{email}_{ts.replace(':','-')}_{proof.name}"
             pth = os.path.join(UPLOAD_DIR, fn)
-            with open(pth,'wb') as f: f.write(proof.getbuffer())
-        user['logs'].append({'timestamp':ts,'activity':act,'value':val,'proof':pth})
+            with open(pth,'wb') as f:
+                f.write(proof.getbuffer())
+        user['logs'].append({
+            'id': uuid.uuid4().hex,
+            'timestamp': ts,
+            'activity': act,
+            'value': val,
+            'proof': pth,
+            'cheers': 0
+        })
         save_data(db)
         st.success('Saved')
         st.rerun()
@@ -181,25 +214,60 @@ with tabs[1]:
     comp, streaks, main = compute_compliance(user)
     st.metric('Main Streak', main)
     cols = st.columns(len(ACTIVITIES))
-    for i, act in enumerate(ACTIVITIES): cols[i].metric(act, f"{comp.get(act,0)}%", streaks.get(act,0))
+    for i, act in enumerate(ACTIVITIES):
+        cols[i].metric(act, f"{comp.get(act,0)}%", streaks.get(act,0))
+    if user['logs']:
+        df = pd.DataFrame(user['logs'])
+        df['date'] = pd.to_datetime(df['timestamp']).apply(effective_date)
+        pivot = df.pivot_table(index='date', columns='activity', values='value', aggfunc='sum').fillna(0)
+        st.line_chart(pivot)
+        csv = df.to_csv(index=False)
+        st.download_button('Download CSV', csv, 'logs.csv', 'text/csv')
 # Feed
 with tabs[2]:
     st.header('Social Feed')
+    show_all = st.checkbox('Show all users')
     all_logs = []
     for ue, ud in db['users'].items():
-        for l in ud.get('logs',[]): all_logs.append({**l,'user':ue,'date':effective_date(datetime.fromisoformat(l['timestamp']))})
+        for l in ud.get('logs', []):
+            all_logs.append({**l, 'user': ue, 'date': effective_date(datetime.fromisoformat(l['timestamp']))})
     df_all = pd.DataFrame(all_logs)
-    if df_all.empty: st.write('No entries.')
+    if df_all.empty:
+        st.write('No entries.')
     else:
-        for _,r in df_all.sort_values('date',ascending=False).head(20).iterrows(): st.write(f"{r['user']}: {r['activity']}={r['value']}")
+        if not show_all:
+            df_all = df_all[df_all['user'].isin(user.get('follows', []) + [email])]
+        for _, r in df_all.sort_values('date', ascending=False).head(20).iterrows():
+            st.subheader(f"{db['users'][r['user']].get('name', r['user'])}: {r['activity']}")
+            st.write(r['value'])
+            if r.get('proof'):
+                st.image(r['proof'])
+            st.write(f"Cheers: {r.get('cheers',0)}")
+            if st.button('Cheer', key=f"cheer_{r['id']}"):
+                for l in db['users'][r['user']]['logs']:
+                    if l.get('id') == r['id']:
+                        l['cheers'] = l.get('cheers', 0) + 1
+                        save_data(db)
+                        st.experimental_rerun()
 # History
 with tabs[3]:
     st.header('History')
     sel = st.date_input('Date', date.today(), key='history_date')
-    hist = [(ue,l) for ue,ud in db['users'].items() for l in ud.get('logs',[]) if effective_date(datetime.fromisoformat(l['timestamp']))==sel]
-    if not hist: st.write('No logs.')
+    hist = [
+        (ue, l)
+        for ue, ud in db['users'].items()
+        for l in ud.get('logs', [])
+        if effective_date(datetime.fromisoformat(l['timestamp'])) == sel
+    ]
+    if not hist:
+        st.write('No logs.')
     else:
-        for ue,l in hist: st.write(f"{ue}: {l['activity']}={l['value']}")
+        for ue, l in hist:
+            st.subheader(f"{db['users'][ue].get('name', ue)}: {l['activity']}")
+            st.write(l['value'])
+            if l.get('proof'):
+                st.image(l['proof'])
+            st.write(f"Cheers: {l.get('cheers',0)}")
 # Leaderboard
 with tabs[4]:
     st.header('Leaderboard')
