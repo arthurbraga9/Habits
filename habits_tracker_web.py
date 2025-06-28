@@ -131,7 +131,7 @@ if 'email' not in st.session_state:
         if email not in db['users']:
             db['users'][email] = {'goals': DEFAULT_GOALS.copy(), 'logs': []}
             save_data(db)
-        st.experimental_rerun()
+        st.rerun()
     st.stop()
 email = st.session_state.email
 user = db['users'].get(email)
@@ -142,7 +142,7 @@ if user is None:
 st.sidebar.write(f'Logged in: {email}')
 if st.sidebar.button('Logout'):
     del st.session_state.email
-    st.experimental_rerun()
+    st.rerun()
 # Goals
 st.sidebar.subheader('Your Goals')
 for act, val in user['goals'].items():
@@ -174,7 +174,7 @@ with tabs[0]:
         user['logs'].append({'timestamp':ts,'activity':act,'value':val,'proof':pth})
         save_data(db)
         st.success('Saved')
-        st.experimental_rerun()
+        st.rerun()
 # Dashboard
 with tabs[1]:
     st.header('Dashboard')
