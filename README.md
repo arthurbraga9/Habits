@@ -91,6 +91,10 @@ pip install -r requirements.txt
 The app dynamically imports all `.py` files on startup. Missing packages will be
 skipped, but installing everything from `requirements.txt` avoids warnings.
 
+If `bcrypt` cannot be installed, the app automatically falls back to
+`hashlib.sha256` for password hashing. Existing bcrypt hashes continue to work,
+so you can run the project even without the optional dependency.
+
 ---
 
 ## 👥 Inviting Friends
