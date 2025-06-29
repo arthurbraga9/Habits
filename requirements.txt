@@ -1,5 +1,2 @@
 streamlit
-pandas
-SQLAlchemy
-altair
-requests
+replit
