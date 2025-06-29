@@ -27,7 +27,7 @@ Track **Sleep**, **Workout**, **Studying** and **Anki** sessions, upload proof s
 
 - **Python ≥ 3.9**  
 - **Git** & **GitHub CLI** (optional but recommended)  
-- **Streamlit**, **pandas**
+- **Streamlit**, **pandas** (installed from `requirements.txt`)
 
 ---
 
@@ -49,7 +49,7 @@ git clone https://github.com/your-username/habits-tracker.git
 3. **Install dependencies**:
 
    ```bash
-   pip install streamlit pandas
+   pip install -r requirements.txt
    ```
 
 4. **Initialize data store** (first run):
