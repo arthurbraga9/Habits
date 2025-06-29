@@ -58,7 +58,7 @@ def menu(user_id: str):
                     except ValueError:
                         print("Value must be a number, skipping.")
                         continue
-                    log_habit(user_id, habit, val_num, today)
+                    log_habit(user_id, habit, val_num, today, None)
                 print("Logs saved for today.")
         elif choice == "3":
             logs = get_user_logs(user_id)

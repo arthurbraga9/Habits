@@ -69,12 +69,12 @@ def get_user_logs(user_id):
     return db.get(key, {})
 
 
-def log_habit(user_id, habit, value, date):
+def log_habit(user_id, habit, value, date, proof_path=None):
     key = f"user:{user_id}:logs"
     logs = db.get(key, {})
     if date not in logs:
         logs[date] = {}
-    logs[date][habit] = value
+    logs[date][habit] = {"value": value, "proof": proof_path}
     db[key] = logs
 
 
