@@ -49,20 +49,19 @@ Track **Sleep**, **Workout**, **Studying** and **Anki** sessions, upload proof s
 3. **Install dependencies**:
 
    ```bash
-   pip install streamlit pandas
+   pip install -r requirements.txt
    ```
+4. **Initialize database** (first run):
 
-4. **Initialize data store** (first run):
-
-   ```bash
-   echo '{ "players": {} }' > habits_data.json
-   mkdir uploads
-   ```
+```bash
+python -c "import db; db.init_db()"
+mkdir uploads
+```
 
 5. **Run the app**:
 
    ```bash
-   streamlit run habits_tracker_web.py
+   streamlit run app.py
    ```
 
 6. **Visit** `http://localhost:8501` in your browser.
@@ -84,7 +83,7 @@ Track **Sleep**, **Workout**, **Studying** and **Anki** sessions, upload proof s
 3. **Connect** your GitHub repo, select `main` branch, set **Main file** to:
 
    ```
-   habits_tracker_web.py
+   app.py
    ```
 
 4. Click **Deploy** → share the generated URL with friends!
@@ -105,16 +104,16 @@ Track **Sleep**, **Workout**, **Studying** and **Anki** sessions, upload proof s
 
 ## ⚙️ Customization & Extensions
 
-* **Add activities**: Edit `ACTIVITIES` and `DEFAULT_GOALS` at top of the script.
-* **Adjust streak window**: Change `MAX_WEEKS`.
-* **Email reminders**: Integrate a cron job + SMTP/client library.
-* **Auto-sync**: Hook into Garmin/Strava APIs for automatic logs.
+* *Add activities**: Edit `ACTIVITIES` and `DEFAULT_GOALS` at top of the script.
+* *Adjust streak window**: Change `MAX_WEEKS`.
+* *Email reminders**: Integrate a cron job + SMTP/client library.
+* *Auto-sync**: Hook into Garmin/Strava APIs for automatic logs.
 
 ---
 
 ## 🔒 Limitations & Next Steps
 
-* **Data persistence** uses a JSON file & local `uploads/` folder—consider migrating to a database and S3 for production.
+* **Data persistence** uses SQLite. Consider PostgreSQL and S3 for production.
 * **No authentication**—anyone can impersonate. Add OAuth2 or email/password login for security.
 * **Single-page Streamlit UI** limits full mobile app features; consider a React Native wrapper for push notifications.
 

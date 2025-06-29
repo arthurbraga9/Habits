@@ -12,3 +12,4 @@ __pycache__/
 # Editor & OS junk
 .DS_Store
 Thumbs.db
+habits.db
