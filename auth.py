@@ -25,3 +25,21 @@ def get_current_user():
     except Exception:
         pass
     return None
+
+
+def login_with_google():
+    """Simple placeholder login using Streamlit sidebar."""
+    if "user_email" not in st.session_state:
+        st.sidebar.subheader("Login")
+        email = st.sidebar.text_input("Email", "")
+        if st.sidebar.button("Login") and email:
+            st.session_state.user_email = email.strip().lower()
+            st.session_state.user_name = email.split('@')[0]
+            st.success(f"Logged in as {st.session_state.user_name}")
+    return st.session_state.get("user_email"), st.session_state.get("user_name")
+
+
+def logout():
+    if st.sidebar.button("Logout"):
+        st.session_state.clear()
+        st.experimental_rerun()
