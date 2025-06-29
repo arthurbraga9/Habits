@@ -1,5 +1,40 @@
 # db_utils.py
-from replit import db
+"""Database helper functions with Replit fallback."""
+
+try:
+    # Use Replit's built-in database when available
+    from replit import db  # type: ignore
+    _USING_REPLIT = True
+except ModuleNotFoundError:  # pragma: no cover - executed only when package missing
+    # Fallback to a simple JSON file for local development/testing
+    _USING_REPLIT = False
+    import json
+    from pathlib import Path
+
+    _DATA_FILE = Path(__file__).with_name("habits_local.json")
+    if _DATA_FILE.exists():
+        try:
+            _store = json.load(_DATA_FILE.open())
+        except Exception:
+            _store = {}
+    else:
+        _store = {}
+
+    class _LocalDB(dict):
+        """Minimal dict-like DB that persists to ``_DATA_FILE`` on writes."""
+
+        def __init__(self, initial):
+            super().__init__(initial)
+
+        def __setitem__(self, key, value):
+            super().__setitem__(key, value)
+            with _DATA_FILE.open("w") as f:
+                json.dump(self, f)
+
+        def get(self, key, default=None):  # type: ignore[override]
+            return super().get(key, default)
+
+    db = _LocalDB(_store)
 
 
 def get_user_profile(user_id):
