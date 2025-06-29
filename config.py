@@ -51,11 +51,7 @@ DEFAULT_GOALS = {
 }
 
 # --- Database Configuration ---
-try:
-    import streamlit as st
-    DATABASE_URL = st.secrets.get("DATABASE_URL", os.getenv("DATABASE_URL", "sqlite:///./habits.db"))
-except Exception:  # pragma: no cover - st may not be available during import
-    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./habits.db")
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./habits.db")
 
 # --- OAuth2 / External API Config ---
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")

@@ -143,6 +143,16 @@ No external authentication or OAuth is currently implemented (just simple email/
 * **Environment Variables:** In production, you can set `DATABASE_URL` to a PostgreSQL (or other) URI if not using SQLite.  `config.py` reads it via Streamlit secrets or `os.environ`.  You can also set client IDs/secrets for Google, Strava, etc. via `GOOGLE_CLIENT_ID`, `STRAVA_CLIENT_ID`, etc.
 * **Streamlit Cloud:** To deploy on Streamlit Cloud (sharing URL), ensure all files (`*.py`, `requirements.txt`) are in the repo root.  Streamlit Cloud will automatically run `streamlit run app.py`.  Store any secrets (e.g. production `DATABASE_URL`) in the Streamlit app’s secret manager.  The `/uploads` folder in the deployed app is ephemeral, so for long-term proof storage consider mounting external storage or a database (by default, each log’s `proof_url` is a path that expects an accessible file).
 * **Replit:** The included `.replit` launches `streamlit run main.py --server.port 5000`.  On Replit, files write to a virtual filesystem that persists between runs (unless you `rm -rf` them).  Note: Replit limits process uptime, so user sessions may reset after inactivity.  Replit’s built-in DB means you don’t need a separate database host.  Also, on Replit there is no separate port exposure needed beyond what `.replit` sets.
+* **Fly.io Deployment**
+
+   1. Install Fly CLI: `curl -L https://fly.io/install.sh | sh`
+   2. Authenticate: `fly auth signup`
+   3. Launch app: `fly launch --name habits-tracker --dockerfile Dockerfile`
+   4. Create volume: `fly volumes create uploads --size 1`
+   5. Deploy: `fly deploy`
+   6. Scale to 1 shared-CPU: `fly scale vm shared-cpu-1`
+
+   The `uploads/` directory is mounted as a persistent volume. The app binds to the `$PORT` environment variable provided by Fly.io.
 * **Uploads Persistence:** By default, uploaded screenshots are saved to a local `uploads/` directory.  In a multi-instance or containerized deployment, ensure this folder is on persistent storage (or switch to using an object store).  In SQLite/Streamlit mode this is a plain directory; in Replit mode, `main.py` also uses `uploads/` via `os.makedirs("uploads")`.  If you switch to an external file store, you may need to modify the `add_log()` logic to upload files to S3/GCS and store URLs.
 * **Port/Networking:** If you need to run on a specific port (e.g. behind a proxy), adjust the Streamlit run command (`streamlit run app.py --server.port <port>`).  The default inside `.replit` maps internal port 5000 to external 80.
 
