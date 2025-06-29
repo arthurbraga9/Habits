@@ -5,7 +5,7 @@ run = "env STREAMLIT_SERVER_FILE_WATCHER_TYPE=none streamlit run main.py --serve
 modules = ["python-3.11"]
 
 [nix]
-packages = ["glibcLocales"]
+packages = ["cairo", "ffmpeg-full", "freetype", "ghostscript", "glibcLocales", "gobject-introspection", "gtk3", "lcms2", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "openjpeg", "pkg-config", "qhull", "tcl", "tk", "zlib"]
 
 [[ports]]
 localPort = 5000
