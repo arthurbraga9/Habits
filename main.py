@@ -4,6 +4,22 @@
 from pathlib import Path
 import importlib.util
 import sys
+import config
+
+# ---------------------------------------------------------------------------
+# Bootstrap the environment. This installs any missing dependencies listed in
+# ``requirements.txt`` and initializes the SQLite database.  This allows the
+# application to run even when executed on a fresh environment (e.g. Replit)
+# without the user having to manually install packages first.
+# ---------------------------------------------------------------------------
+try:
+    from bootstrap import bootstrap
+except Exception as exc:  # pragma: no cover - bootstrap should always exist
+    print(f"Failed to import bootstrap utility: {exc}")
+else:
+    bootstrap()
+
+# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # Bootstrap the environment. This installs any missing dependencies listed in
@@ -24,14 +40,18 @@ else:
 # anywhere without manual imports.
 BASE_DIR = Path(__file__).parent
 for py_file in BASE_DIR.rglob("*.py"):
+ i0gczj-codex/corrigir-erro-de-importerror-em-db
+    if py_file.name not in ("main.py", "bootstrap.py", "app.py", "__init__.py"):
+
     if py_file.name not in ("main.py", "bootstrap.py", "__init__.py"):
+        main
         module_name = ".".join(py_file.relative_to(BASE_DIR).with_suffix("").parts)
         spec = importlib.util.spec_from_file_location(module_name, py_file)
         module = importlib.util.module_from_spec(spec)
         sys.modules[module_name] = module
         try:
             spec.loader.exec_module(module)
-        except ModuleNotFoundError as e:
+        except (ModuleNotFoundError, ImportError) as e:
             print(f"Skipping module {module_name} due to missing dependency: {e}")
 
 # Load any assets placed in a `data/` folder so data files work on Replit or
@@ -51,6 +71,8 @@ from db_utils import (
     add_friend,
     get_user_profile,
     update_user_name,
+    update_service_token,
+    get_service_token,
 )
 
 # Main Streamlit app for Habits Tracker
@@ -68,14 +90,28 @@ if not profile:
     profile = get_user_profile(user_id)
 
 # Sidebar menu for navigation
-menu = ["Add Habit", "Log Today's Habits", "Past Logs", "Friends (optional)"]
+menu = [
+    "Add Habit",
+    "Log Today's Habits",
+    "Past Logs",
+    "Friends (optional)",
+    "Services",
+]
 choice = st.sidebar.radio("Navigation", menu)
 
 # --- Add Habit ---
 if choice == "Add Habit":
     st.title("Add a New Habit")
     st.markdown("Add a custom habit and set your daily goal for it.")
-    habit_name = st.text_input("Habit Name")
+    base_act = st.selectbox("Activity", config.ACTIVITIES + ["Custom"])
+    if base_act == "Workout":
+        cat = st.selectbox("Workout Category", list(config.WORKOUT_OPTIONS.keys()))
+        sub = st.selectbox("Type", config.WORKOUT_OPTIONS[cat])
+        habit_name = f"Workout: {sub}"
+    elif base_act == "Custom":
+        habit_name = st.text_input("Habit Name")
+    else:
+        habit_name = base_act
     goal = st.number_input("Daily Goal (e.g., number of times)", min_value=1, step=1, value=1)
     if st.button("Add Habit"):
         if habit_name:
@@ -96,10 +132,27 @@ elif choice == "Log Today's Habits":
         st.markdown(f"**Date:** {today}")
         log_vals = {}
         for habit, info in habits.items():
-            if isinstance(info.get('goal'), (int, float)):
+            if habit.startswith("Workout:"):
+                log_vals[habit] = st.number_input(
+                    f"{habit} minutes",
+                    min_value=0,
+                    step=1,
+                    key=f"log_{habit}"
+                )
+                sub = habit.split(":", 1)[1].strip()
+                if sub in config.WORKOUT_OPTIONS.get("Cardio", []):
+                    st.number_input(
+                        "Distance (km)",
+                        min_value=0.0,
+                        step=0.1,
+                        key=f"dist_{habit}"
+                    )
+            elif isinstance(info.get('goal'), (int, float)):
                 log_vals[habit] = st.number_input(
                     f"{habit} (Goal: {info['goal']})",
-                    min_value=0, step=1, key=f"log_{habit}"
+                    min_value=0,
+                    step=1,
+                    key=f"log_{habit}"
                 )
             else:
                 log_vals[habit] = st.checkbox(f"{habit}", key=f"log_{habit}")
@@ -147,3 +200,24 @@ elif choice == "Friends (optional)":
                     st.write(f"- {habit}: {val}")
             else:
                 st.write("No logs for this friend yet.")
+
+# --- Services ---
+elif choice == "Services":
+    st.title("Connect External Services")
+    strava_tok = st.text_input(
+        "Strava Access Token",
+        value=get_service_token(user_id, "strava") or "",
+    )
+    garmin_tok = st.text_input(
+        "Garmin Token",
+        value=get_service_token(user_id, "garmin") or "",
+    )
+    apple_tok = st.text_input(
+        "Apple Health Token",
+        value=get_service_token(user_id, "apple") or "",
+    )
+    if st.button("Save Tokens"):
+        update_service_token(user_id, "strava", strava_tok)
+        update_service_token(user_id, "garmin", garmin_tok)
+        update_service_token(user_id, "apple", apple_tok)
+        st.success("Tokens saved!")
