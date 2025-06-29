@@ -1,0 +1,13 @@
+app = "habits-tracker"
+kill_signal = "SIGINT"
+kill_timeout = 5
+
+[build]
+  image = "dockerfile"
+
+[env]
+  PORT = "8080"
+
+[[mounts]]
+  source = "uploads"
+  destination = "/app/uploads"

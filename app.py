@@ -85,6 +85,7 @@ def logout():
 init_db()
 db = SessionLocal()
 os.makedirs("uploads", exist_ok=True)
+port = int(os.environ.get("PORT", 8501))
 
 
 def user_exists(email):

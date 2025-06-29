@@ -68,6 +68,7 @@ from db_utils import (
 from utils.auth import hash_password, verify_password
 
 os.makedirs("uploads", exist_ok=True)
+port = int(os.environ.get("PORT", 8501))
 
 
 def user_exists(email: str) -> bool:
