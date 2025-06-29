@@ -11,6 +11,7 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     email = Column(String, unique=True, index=True)
     name = Column(String, default="")
+    hashed_password = Column(String, nullable=False)
     strava_token = Column(String, nullable=True)
     garmin_token = Column(String, nullable=True)
     apple_token = Column(String, nullable=True)
@@ -58,8 +59,8 @@ def init_db():
 def get_user_by_email(db_session, email: str):
     return db_session.query(User).filter(User.email == email).first()
 
-def create_user(db_session, email: str, name: str = ""):
-    user = User(email=email, name=name)
+def create_user(db_session, email: str, name: str = "", hashed_password: str = ""):
+    user = User(email=email, name=name, hashed_password=hashed_password)
     db_session.add(user)
     for act, goal in config.DEFAULT_GOALS.items():
         user.goals.append(Goal(activity=act, target=goal))

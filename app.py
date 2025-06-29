@@ -14,6 +14,7 @@ from config import (
 )
 import config
 from db import init_db, SessionLocal, get_user_by_email, create_user, add_log, get_followed_user_ids, User, Log, Follow
+import bcrypt
 from charts import plot_12week_line, plot_calendar_heatmap
 import api
 
@@ -76,20 +77,6 @@ def render_leaderboard():
     df_board = pd.DataFrame(board).sort_values("MainStreak", ascending=False)
     st.table(df_board.head(10))
 
-
-def login_with_google():
-    """Session-based login placeholder."""
-    if "email" in st.session_state:
-        return st.session_state["email"], st.session_state.get("name", "")
-    st.sidebar.header("Login")
-    email = st.sidebar.text_input("Email address:")
-    if st.sidebar.button("Login") and email:
-        st.session_state["email"] = email.strip().lower()
-        st.session_state["name"] = email.split("@")[0]
-        st.experimental_rerun()
-    return None, None
-
-
 def logout():
     if st.sidebar.button("Logout"):
         st.session_state.clear()
@@ -98,6 +85,14 @@ def logout():
 init_db()
 db = SessionLocal()
 os.makedirs("uploads", exist_ok=True)
+
+
+def user_exists(email):
+    return get_user_by_email(db, email) is not None
+
+
+def hash_password(pw):
+    return bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
 
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout='wide')
 
@@ -126,18 +121,47 @@ else:
         unsafe_allow_html=True,
     )
 
-email, name = login_with_google()
-if not email:
+choice = st.sidebar.selectbox("Access", ["Log In", "Sign Up"])
+
+if "email" not in st.session_state:
+    if choice == "Sign Up":
+        st.title("🆕 Create an Account")
+        with st.form("signup_form"):
+            email = st.text_input("Email address")
+            name = st.text_input("Full name")
+            password = st.text_input("Password", type="password")
+            confirm = st.text_input("Confirm password", type="password")
+            submitted = st.form_submit_button("Sign Up")
+            if submitted:
+                if not email or not name or not password or not confirm:
+                    st.error("All fields are required.")
+                elif password != confirm:
+                    st.error("Passwords do not match.")
+                elif user_exists(email):
+                    st.error("An account with this email already exists.")
+                else:
+                    create_user(db, email.lower().strip(), name.strip(), hash_password(password))
+                    st.success("Account created! Please log in.")
+                    st.experimental_rerun()
+    else:
+        st.title("🔒 Please Log In")
+        with st.form("login_form"):
+            email = st.text_input("Email address")
+            password = st.text_input("Password", type="password")
+            submitted = st.form_submit_button("Log In")
+            if submitted:
+                user = get_user_by_email(db, email.lower().strip())
+                if not user or not bcrypt.checkpw(password.encode(), user.hashed_password.encode()):
+                    st.error("Invalid email or password")
+                else:
+                    st.session_state['email'] = user.email
+                    st.experimental_rerun()
+    st.header("🏆 Leaderboard")
     render_leaderboard()
     st.stop()
 
+email = st.session_state['email']
 user = get_user_by_email(db, email)
-if user is None:
-    user = create_user(db, email=email, name=name)
-else:
-    if name and user.name != name:
-        user.name = name
-        db.commit()
 
 st.sidebar.write(f"Logged in as: **{user.name or email}**")
 logout()
