@@ -6,9 +6,23 @@ import pandas as pd
 from config import PAGE_TITLE, PAGE_ICON, ACTIVITIES, CUTOFF_HOUR, LIGHT_THEME, DARK_THEME
 import config
 from db import init_db, SessionLocal, get_user_by_email, create_user, add_log, get_followed_user_ids, User, Log, Follow
-from auth import login_with_google, logout
 from charts import plot_12week_line, plot_calendar_heatmap
 import api
+
+
+def login_with_google():
+    """Minimal placeholder login after removing ReplAuth."""
+    st.sidebar.header("Login")
+    email = st.sidebar.text_input("Email address:")
+    if st.sidebar.button("Login") and email:
+        return email.strip().lower(), email.split("@")[0]
+    return None, None
+
+
+def logout():
+    if st.sidebar.button("Logout"):
+        st.session_state.clear()
+        st.experimental_rerun()
 
 init_db()
 db = SessionLocal()

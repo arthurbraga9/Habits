@@ -1,6 +1,5 @@
 # main.py
 import streamlit as st
-from auth import login_button, logout_button, get_current_user
 from db_utils import (
     get_user_habits, add_user_habit, get_user_logs,
     log_habit, get_user_friends, add_friend, get_user_profile,
@@ -10,22 +9,12 @@ from db_utils import (
 # Main Streamlit app for Habits Tracker
 st.set_page_config(page_title="Habits Tracker", page_icon="🏆", layout="wide")
 
-# Check authentication status
-user = get_current_user()
-if not user:
-    st.markdown("<h3 style='text-align: center; margin-top: 50px;'>Please log in with your Replit account to continue.</h3>", unsafe_allow_html=True)
-    login_button()
-    st.stop()
-
-# Greet user in sidebar and provide logout
-st.sidebar.header(f"👋 Hello, {user['name']}!")
-if st.sidebar.button("Log Out"):
-    logout_button()
-    st.stop()
+# Use a fixed anonymous user now that ReplAuth is removed
+user_id = "test"
+user_name = "Test User"
+st.sidebar.header(f"👋 Hello, {user_name}!")
 
 # Ensure user profile exists in DB
-user_id = user['id']
-user_name = user['name']
 profile = get_user_profile(user_id)
 if not profile:
     update_user_name(user_id, user_name)
