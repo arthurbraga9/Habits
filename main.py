@@ -1,9 +1,38 @@
 # main.py
+"""Streamlit entrypoint for the Habits tracker."""
+
+from pathlib import Path
+import importlib.util
+import sys
+
+# Dynamically import all modules under the project so helper files can be placed
+# anywhere without manual imports.
+BASE_DIR = Path(__file__).parent
+for py_file in BASE_DIR.rglob("*.py"):
+    if py_file.name not in ("main.py", "__init__.py"):
+        module_name = ".".join(py_file.relative_to(BASE_DIR).with_suffix("").parts)
+        spec = importlib.util.spec_from_file_location(module_name, py_file)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+
+# Load any assets placed in a `data/` folder so data files work on Replit or
+# locally.
+data_dir = BASE_DIR / "data"
+if data_dir.exists():
+    for asset in data_dir.rglob("*"):
+        print(f"Loading asset: {asset}")
+
 import streamlit as st
 from db_utils import (
-    get_user_habits, add_user_habit, get_user_logs,
-    log_habit, get_user_friends, add_friend, get_user_profile,
-    update_user_name
+    get_user_habits,
+    add_user_habit,
+    get_user_logs,
+    log_habit,
+    get_user_friends,
+    add_friend,
+    get_user_profile,
+    update_user_name,
 )
 
 # Main Streamlit app for Habits Tracker

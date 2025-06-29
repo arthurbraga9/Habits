@@ -1,9 +1,16 @@
-run = "streamlit run main.py"
-modules = ["python-3.12", "bash"]
+entrypoint = "main.py"
+modules = ["python-3.11"]
 
-[deployment]
-run = ["streamlit", "run", "main.py"]
+[workflows]
+runButton = "Streamlit"
+[[workflows.workflow]]
+name = "Streamlit"
+mode = "sequential"
+author = 12345678
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run main.py --server.address 0.0.0.0 --server.port 8501 --server.enableCORS false"
 
-[nix]
-channel = "stable-24_05"
-packages = ["glibcLocales"]
+[[ports]]
+localPort = 8501
+externalPort = 80
