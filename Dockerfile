@@ -9,4 +9,5 @@ COPY . /app
 
 RUN mkdir /app/uploads
 
-CMD ["bash", "-lc", "streamlit run app.py --server.port $PORT --server.address 0.0.0.0"]
+# Use shell form so $PORT is expanded by the shell
+CMD bash -lc "streamlit run app.py --server.port $PORT --server.address 0.0.0.0"
