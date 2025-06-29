@@ -11,13 +11,26 @@ ACTIVITIES = [
     "Running",
     "Walking",
     "Cycling",
-    "Meditation",
-    "Anki",
     "Strength Training",
     "Yoga",
+    "Meditation",
+    "Anki (Flashcards)",
     "Journaling",
     "Reading",
 ]
+
+UNIT_MAP = {
+    "Sleep": "hours",
+    "Running": ["minutes", "kilometers"],
+    "Walking": ["minutes", "kilometers"],
+    "Cycling": ["minutes", "kilometers"],
+    "Strength Training": "minutes",
+    "Yoga": "minutes",
+    "Meditation": "minutes",
+    "Anki (Flashcards)": "flashcards",
+    "Journaling": "minutes",
+    "Reading": "pages",
+}
 WORKOUT_OPTIONS = {
     "Strength": ["Upper Body", "Lower Body", "Full Body"],
     "Cardio": ["Running", "Cycling", "Swimming"],
@@ -30,7 +43,7 @@ DEFAULT_GOALS = {
     "Walking": 150,          # minutes/week
     "Cycling": 150,          # minutes/week
     "Meditation": 10,        # minutes/day
-    "Anki": 1.0,             # flashcards/day
+    "Anki (Flashcards)": 1.0,             # flashcards/day
     "Strength Training": 60, # minutes/week
     "Yoga": 60,              # minutes/week
     "Journaling": 10,        # minutes/day
@@ -38,7 +51,11 @@ DEFAULT_GOALS = {
 }
 
 # --- Database Configuration ---
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./habits.db")
+try:
+    import streamlit as st
+    DATABASE_URL = st.secrets.get("DATABASE_URL", os.getenv("DATABASE_URL", "sqlite:///./habits.db"))
+except Exception:  # pragma: no cover - st may not be available during import
+    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./habits.db")
 
 # --- OAuth2 / External API Config ---
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
