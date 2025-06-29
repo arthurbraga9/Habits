@@ -3,19 +3,46 @@ import streamlit as st
 from datetime import datetime, date, time, timedelta
 import pandas as pd
 
-from config import PAGE_TITLE, PAGE_ICON, ACTIVITIES, CUTOFF_HOUR, LIGHT_THEME, DARK_THEME
+from config import (
+    PAGE_TITLE,
+    PAGE_ICON,
+    ACTIVITIES,
+    CUTOFF_HOUR,
+    LIGHT_THEME,
+    DARK_THEME,
+)
 import config
 from db import init_db, SessionLocal, get_user_by_email, create_user, add_log, get_followed_user_ids, User, Log, Follow
 from charts import plot_12week_line, plot_calendar_heatmap
 import api
 
 
+# Display units for each activity
+UNITS = {
+    "Sleep": "hours",
+    "Workout": "minutes",
+    "Studying": "hours",
+    "Anki": "flashcards",
+}
+
+GOAL_UNITS = {
+    "Sleep": "hours/day",
+    "Workout": "minutes/week",
+    "Studying": "hours/week",
+    "Anki": "flashcards/day",
+}
+
+
 def login_with_google():
-    """Minimal placeholder login after removing ReplAuth."""
+    """Session-based login placeholder."""
+    if "email" in st.session_state:
+        return st.session_state["email"], st.session_state.get("name", "")
     st.sidebar.header("Login")
     email = st.sidebar.text_input("Email address:")
     if st.sidebar.button("Login") and email:
-        return email.strip().lower(), email.split("@")[0]
+        st.session_state["email"] = email.strip().lower()
+        st.session_state["name"] = email.split("@")[0]
+        st.experimental_rerun()
     return None, None
 
 
@@ -71,13 +98,22 @@ logout()
 
 st.sidebar.subheader("Your Goals")
 for goal in user.goals:
-    if goal.activity in ["Sleep", "Studying"]:
+    unit_label = GOAL_UNITS.get(goal.activity, "units/week")
+    if unit_label.endswith("/day"):
+        step = 0.5 if "hours" in unit_label else 1
         new_target = st.sidebar.number_input(
-            f"{goal.activity} (hours/day)", min_value=0.0, value=float(goal.target), step=0.5
+            f"{goal.activity} ({unit_label})",
+            min_value=0.0 if step == 0.5 else 0,
+            value=float(goal.target),
+            step=step,
         )
     else:
+        step = 1
         new_target = st.sidebar.number_input(
-            f"{goal.activity} (units/week)", min_value=0, value=int(goal.target), step=1
+            f"{goal.activity} ({unit_label})",
+            min_value=0,
+            value=int(goal.target),
+            step=step,
         )
     goal.target = new_target
 db.commit()
@@ -109,25 +145,31 @@ with tabs[0]:
     st.header("Log Activity")
     log_date = st.date_input("Date", date.today(), key="log_date")
     activity = st.selectbox("Activity", ACTIVITIES)
-    if activity in ["Sleep", "Studying"]:
-        value = st.number_input("Hours", min_value=0.0, step=0.5)
+    unit = UNITS.get(activity, "units")
+    if unit == "hours":
+        value = st.number_input("Duration (hours)", min_value=0.0, step=0.5)
+    elif unit == "minutes":
+        value = st.number_input("Duration (minutes)", min_value=0, step=1)
+    elif unit == "flashcards":
+        value = st.number_input("Flashcards", min_value=0, step=1)
     else:
         value = st.number_input("Units", min_value=0, step=1)
     proof = st.file_uploader("Proof (PNG/JPG)", type=["png", "jpg", "jpeg"])
     if st.button("Save Log"):
-        timestamp = datetime.now()
-        effective_date = timestamp.date()
-        if timestamp.time() < time(CUTOFF_HOUR):
-            effective_date -= timedelta(days=1)
-        proof_path = None
-        if proof:
+        if not proof:
+            st.error("Please upload a screenshot proof before saving.")
+        else:
+            timestamp = datetime.now()
+            effective_date = timestamp.date()
+            if timestamp.time() < time(CUTOFF_HOUR):
+                effective_date -= timedelta(days=1)
             file_name = f"{user.id}_{timestamp.isoformat().replace(':','-')}_{proof.name}"
             proof_path = f"uploads/{file_name}"
             with open(proof_path, "wb") as f:
                 f.write(proof.getbuffer())
-        add_log(db, user, activity, value, timestamp, proof_path)
-        st.success("Activity logged!")
-        st.experimental_rerun()
+            add_log(db, user, activity, value, timestamp, proof_path)
+            st.success("Activity logged!")
+            st.experimental_rerun()
 
 with tabs[1]:
     st.header("Dashboard")
@@ -221,7 +263,8 @@ with tabs[2]:
             log_user = db.query(User).get(log.user_id)
             with st.container():
                 st.subheader(f"{log_user.name or log_user.email} - {log.activity}")
-                st.write(f"Value: {log.value}")
+                unit = UNITS.get(log.activity, "units")
+                st.write(f"Value: {log.value} {unit}")
                 if log.proof_url:
                     st.image(log.proof_url, caption="Proof", use_column_width=True)
                 cheers_key = f"cheer_{log.id}"
@@ -243,7 +286,8 @@ with tabs[3]:
         for log in hist_logs:
             u = db.query(User).get(log.user_id)
             st.subheader(f"{u.name or u.email} - {log.activity}")
-            st.write(f"Value: {log.value}")
+            unit = UNITS.get(log.activity, "units")
+            st.write(f"Value: {log.value} {unit}")
             if log.proof_url:
                 st.image(log.proof_url, use_column_width=True)
             st.write(f"Cheers: {log.cheers}")
