@@ -1,4 +1,7 @@
-run = "streamlit run main.py --server.port 5000"
+# Disable Streamlit's kqueue-based file watcher for environments where the
+# kqueue APIs are unavailable (e.g. Linux). This prevents crashes when
+# running `streamlit run main.py`.
+run = "env STREAMLIT_SERVER_FILE_WATCHER_TYPE=none streamlit run main.py --server.port 5000"
 modules = ["python-3.11"]
 
 [nix]
