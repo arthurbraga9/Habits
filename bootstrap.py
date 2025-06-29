@@ -28,6 +28,7 @@ def ensure_dependencies():
         import pandas  # noqa: F401
         import requests  # noqa: F401
         import streamlit  # noqa: F401
+        import bcrypt  # noqa: F401
     except ModuleNotFoundError:
         print("Missing dependencies detected. Installing from requirements.txt...")
         _install_requirements()
