@@ -88,6 +88,21 @@ mkdir uploads
 
 4. Click **Deploy** → share the generated URL with friends!
 
+## 🔑 Secrets & Environment Variables
+Use a `.streamlit/secrets.toml` file to store credentials like database URLs or API keys. For example:
+
+```toml
+DATABASE_URL = "sqlite:///./habits.db"
+GOOGLE_CLIENT_ID = "your-google-client-id"
+GOOGLE_CLIENT_SECRET = "your-google-client-secret"
+STRAVA_CLIENT_ID = "your-strava-client-id"
+STRAVA_CLIENT_SECRET = "your-strava-client-secret"
+```
+
+When deployed on Streamlit Community Cloud, values from `secrets.toml` are loaded into environment variables and accessible via `os.getenv`.
+See `.streamlit/secrets.toml.example` for a template.
+
+
 ---
 
 ## 👥 Inviting Friends
