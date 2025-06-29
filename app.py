@@ -14,7 +14,11 @@ from config import (
 )
 import config
 from db import init_db, SessionLocal, get_user_by_email, create_user, add_log, get_followed_user_ids, User, Log, Follow
-import bcrypt
+try:
+    import bcrypt
+except ModuleNotFoundError:
+    bcrypt = None
+import hashlib
 from charts import plot_12week_line, plot_calendar_heatmap
 import api
 
@@ -92,7 +96,9 @@ def user_exists(email):
 
 
 def hash_password(pw):
-    return bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+    if bcrypt:
+        return bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+    return hashlib.sha256(pw.encode()).hexdigest()
 
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout='wide')
 
@@ -151,11 +157,19 @@ if "email" not in st.session_state:
             submitted = st.form_submit_button("Log In")
             if submitted:
                 user = get_user_by_email(db, email.lower().strip())
-                if not user or not bcrypt.checkpw(password.encode(), user.hashed_password.encode()):
+                if not user:
                     st.error("Invalid email or password")
                 else:
-                    st.session_state['email'] = user.email
-                    st.experimental_rerun()
+                    stored = user.hashed_password
+                    if bcrypt and stored.startswith("$2"):
+                        valid = bcrypt.checkpw(password.encode(), stored.encode())
+                    else:
+                        valid = hashlib.sha256(password.encode()).hexdigest() == stored
+                    if not valid:
+                        st.error("Invalid email or password")
+                    else:
+                        st.session_state['email'] = user.email
+                        st.experimental_rerun()
     st.header("🏆 Leaderboard")
     render_leaderboard()
     st.stop()
