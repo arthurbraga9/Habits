@@ -4,7 +4,11 @@
 from pathlib import Path
 import importlib.util
 import sys
+import os
 import config
+
+# Disable Streamlit file watching on platforms lacking kqueue support
+os.environ.setdefault("STREAMLIT_SERVER_FILE_WATCHER_TYPE", "none")
 
 # ---------------------------------------------------------------------------
 # Bootstrap the environment. This installs any missing dependencies listed in
