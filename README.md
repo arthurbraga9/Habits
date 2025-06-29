@@ -76,6 +76,20 @@ mkdir uploads
 
 ---
 
+## ❓ Troubleshooting
+
+If you see `ModuleNotFoundError: No module named 'sqlalchemy'` when the app starts,
+make sure the required packages are installed:
+
+```bash
+pip install -r requirements.txt
+```
+
+The app dynamically imports all `.py` files on startup. Missing packages will be
+skipped, but installing everything from `requirements.txt` avoids warnings.
+
+---
+
 ## 👥 Inviting Friends
 
 1. Share your progress with friends.

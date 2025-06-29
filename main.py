@@ -14,7 +14,10 @@ for py_file in BASE_DIR.rglob("*.py"):
         spec = importlib.util.spec_from_file_location(module_name, py_file)
         module = importlib.util.module_from_spec(spec)
         sys.modules[module_name] = module
-        spec.loader.exec_module(module)
+        try:
+            spec.loader.exec_module(module)
+        except ModuleNotFoundError as e:
+            print(f"Skipping module {module_name} due to missing dependency: {e}")
 
 # Load any assets placed in a `data/` folder so data files work on Replit or
 # locally.
