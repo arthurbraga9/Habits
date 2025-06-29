@@ -18,8 +18,11 @@ Track **Sleep**, **Workout**, **Studying** and **Anki** sessions, upload proof s
 - **Dashboard**: Line chart of weekly minutes per activity over the last 12 weeks.
 - **Social Feed**: View recent logs from people you follow; “Cheer” others’ logs.
 - **CSV Export**: Download your full log history from the dashboard.
-- **History View**: Select any past date to see everyone’s logs.  
+- **History View**: Select any past date to see everyone’s logs.
 - **Leaderboard**: Rank users by their current Main streak.
+- **Workout Options**: Choose from strength, cardio, or mobility subtypes when adding habits.
+- **Cardio Metrics**: Log optional distance for cardio workouts.
+- **Service Sync**: Store tokens for Strava, Garmin, or Apple Health for future integrations.
 
 ---
 
