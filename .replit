@@ -1,1 +1,13 @@
-run = "streamlit run main.py --server.port 5000"
+run = "streamlit run app.py"
+modules = ["python-3.12", "bash"]
+
+[deployment]
+run = ["sh", "-c", "streamlit run app.py"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["glibcLocales"]
+
+[[ports]]
+localPort = 8501
+externalPort = 80

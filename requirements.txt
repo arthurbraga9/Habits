@@ -1,2 +1,6 @@
 streamlit
 replit
+altair
+pandas
+requests
+sqlalchemy
