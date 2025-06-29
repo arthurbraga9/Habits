@@ -24,12 +24,10 @@ def _install_requirements():
 def ensure_dependencies():
     """Ensure critical third-party packages are available."""
     try:
-        import bcrypt  # noqa: F401
         import pandas  # noqa: F401
         import requests  # noqa: F401
         import sqlalchemy  # noqa: F401
         import streamlit  # noqa: F401
-        import bcrypt  # noqa: F401
     except ModuleNotFoundError:
         print("Missing dependencies detected. Installing from requirements.txt...")
         _install_requirements()

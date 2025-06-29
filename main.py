@@ -65,24 +65,13 @@ from db_utils import (
     get_service_token,
     db,
 )
-try:
-    import bcrypt
-except ModuleNotFoundError:
-    bcrypt = None
-import hashlib
+from utils.auth import hash_password, verify_password
 
 os.makedirs("uploads", exist_ok=True)
 
 
 def user_exists(email: str) -> bool:
     return get_user_profile(email) is not None
-
-
-def hash_password(pw: str) -> str:
-    """Hash a plaintext password."""
-    if bcrypt:
-        return bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
-    return hashlib.sha256(pw.encode()).hexdigest()
 
 
 def create_user(email: str, name: str, hashed_password: str):
@@ -97,9 +86,7 @@ def valid_credentials(email: str, password: str) -> bool:
     if not profile or "hashed_password" not in profile:
         return False
     stored = profile["hashed_password"]
-    if bcrypt and stored.startswith("$2"):
-        return bcrypt.checkpw(password.encode(), stored.encode())
-    return hashlib.sha256(password.encode()).hexdigest() == stored
+    return verify_password(password, stored)
 
 
 def show_leaderboard():
