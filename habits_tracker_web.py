@@ -3,13 +3,17 @@ import os, json
 import pandas as pd
 import uuid
 from datetime import datetime, date, time, timedelta
+from config import (
+    PAGE_TITLE,
+    PAGE_ICON,
+    CUTOFF_HOUR,
+    ACTIVITIES,
+    DEFAULT_GOALS,
+)
 
 # ── CONFIG ─────────────────────────────────────────────────────────────────────
 DATA_FILE    = "habits_data.json"
 UPLOAD_DIR   = "uploads"
-CUTOFF_HOUR  = 4   # logs before 4 AM count for previous day
-ACTIVITIES   = ["Sleep", "Workout", "Studying", "Anki"]
-DEFAULT_GOALS = {act: 7.0 if act == "Sleep" else 150.0 if act == "Workout" else 10.0 if act == "Studying" else 1.0 for act in ACTIVITIES}
 
 # ensure persistence directory exists
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -130,7 +134,7 @@ def compute_compliance(user):
     return comp, streaks, main
 
 # ── APP ────────────────────────────────────────────────────────────────────────
-st.set_page_config(page_title='Habits! 🔥🔪', layout='wide')
+st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout='wide')
 db = load_data()
 # Auth
 if 'email' not in st.session_state:
@@ -172,20 +176,51 @@ if st.sidebar.button('Logout'):
 st.sidebar.subheader('Your Goals')
 for act, val in user['goals'].items():
     if act in ['Sleep', 'Studying']:
-        new_val = st.sidebar.number_input(f"{act} (hrs)", min_value=0.0, value=float(val), step=0.5)
+        new_val = st.sidebar.number_input(
+            f"{act} (hrs)", min_value=0.0, value=float(val), step=0.5
+        )
+    elif act == 'Workout':
+        new_val = st.sidebar.number_input(
+            f"{act} (min)", min_value=0, value=int(val), step=1
+        )
     else:
-        new_val = st.sidebar.number_input(f"{act} (units)", min_value=0, value=int(val), step=1)
+        new_val = st.sidebar.number_input(
+            f"{act} (units)", min_value=0, value=int(val), step=1
+        )
     user['goals'][act] = new_val
 save_data(db)
 # Tabs
-tabs = st.tabs(['📝 Log','📊 Dashboard','💬 Feed','📜 History','🏆 Leaderboard'])
-# Log Tab
+tabs = st.tabs([
+    '🏠 Home',
+    '📝 Log',
+    '📊 Dashboard',
+    '💬 Feed',
+    '📜 History',
+    '🏆 Leaderboard',
+])
+# Home Tab
 with tabs[0]:
+    st.title('Welcome to Habits!')
+    st.markdown(
+        'Build habits, upload proof, and compete with friends on streaks.'
+    )
+    st.markdown(
+        """
+        **Features**
+        - Multi-player profiles with custom goals
+        - Dashboard with streaks and charts
+        - Social feed to cheer friends
+        """
+    )
+# Log Tab
+with tabs[1]:
     st.header('Log Activity')
     log_date = st.date_input('Date', date.today(), key='log_date')
     act = st.selectbox('Activity', ACTIVITIES)
-    if act in ['Sleep','Studying']:
+    if act in ['Sleep', 'Studying']:
         val = st.number_input('Hours', min_value=0.0, value=0.0, step=0.5)
+    elif act == 'Workout':
+        val = st.number_input('Minutes', min_value=0, value=0, step=1)
     else:
         val = st.number_input('Units', min_value=0, value=0, step=1)
     proof = st.file_uploader('Proof (PNG/JPG)', type=['png','jpg','jpeg'])
@@ -209,7 +244,7 @@ with tabs[0]:
         st.success('Saved')
         st.rerun()
 # Dashboard
-with tabs[1]:
+with tabs[2]:
     st.header('Dashboard')
     comp, streaks, main = compute_compliance(user)
     st.metric('Main Streak', main)
@@ -224,7 +259,7 @@ with tabs[1]:
         csv = df.to_csv(index=False)
         st.download_button('Download CSV', csv, 'logs.csv', 'text/csv')
 # Feed
-with tabs[2]:
+with tabs[3]:
     st.header('Social Feed')
     show_all = st.checkbox('Show all users')
     all_logs = []
@@ -250,7 +285,7 @@ with tabs[2]:
                         save_data(db)
                         st.experimental_rerun()
 # History
-with tabs[3]:
+with tabs[4]:
     st.header('History')
     sel = st.date_input('Date', date.today(), key='history_date')
     hist = [
@@ -269,7 +304,7 @@ with tabs[3]:
                 st.image(l['proof'])
             st.write(f"Cheers: {l.get('cheers',0)}")
 # Leaderboard
-with tabs[4]:
+with tabs[5]:
     st.header('Leaderboard')
     board = [{'user':ue,'streak':compute_compliance(ud)[2]} for ue,ud in db['users'].items()]
     st.table(pd.DataFrame(board).sort_values('streak',ascending=False))
