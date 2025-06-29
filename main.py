@@ -65,13 +65,31 @@ from db_utils import (
     get_service_token,
     db,
 )
+import bcrypt
 
 os.makedirs("uploads", exist_ok=True)
 
 
+def user_exists(email: str) -> bool:
+    return get_user_profile(email) is not None
+
+
+def hash_password(pw: str) -> str:
+    return bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
+
+
+def create_user(email: str, name: str, hashed_password: str):
+    update_user_name(email, name)
+    profile = get_user_profile(email) or {}
+    profile["hashed_password"] = hashed_password
+    db[f"user:{email}:profile"] = profile
+
+
 def valid_credentials(email: str, password: str) -> bool:
-    """Simple credential check placeholder."""
-    return bool(email and password)
+    profile = get_user_profile(email)
+    if not profile or "hashed_password" not in profile:
+        return False
+    return bcrypt.checkpw(password.encode(), profile["hashed_password"].encode())
 
 
 def show_leaderboard():
@@ -91,18 +109,40 @@ def show_leaderboard():
 # Main Streamlit app for Habits Tracker
 st.set_page_config(page_title="Habits Tracker", page_icon="🏆", layout="wide")
 
+access_choice = st.sidebar.selectbox("Access", ["Log In", "Sign Up"])
+
 if "email" not in st.session_state:
-    st.title("🔒 Please Log In")
-    with st.form("login_form"):
-        email = st.text_input("Email address")
-        password = st.text_input("Password", type="password")
-        submit = st.form_submit_button("Log In")
-        if submit:
-            if valid_credentials(email, password):
-                st.session_state["email"] = email.lower().strip()
-                st.experimental_rerun()
-            else:
-                st.error("Invalid email or password")
+    if access_choice == "Sign Up":
+        st.title("🆕 Create an Account")
+        with st.form("signup_form"):
+            email = st.text_input("Email address")
+            name = st.text_input("Full name")
+            password = st.text_input("Password", type="password")
+            confirm = st.text_input("Confirm password", type="password")
+            submitted = st.form_submit_button("Sign Up")
+            if submitted:
+                if not email or not name or not password or not confirm:
+                    st.error("All fields are required.")
+                elif password != confirm:
+                    st.error("Passwords do not match.")
+                elif user_exists(email):
+                    st.error("An account with this email already exists.")
+                else:
+                    create_user(email.lower().strip(), name.strip(), hash_password(password))
+                    st.success("Account created! Please log in.")
+                    st.experimental_rerun()
+    else:
+        st.title("🔒 Please Log In")
+        with st.form("login_form"):
+            email = st.text_input("Email address")
+            password = st.text_input("Password", type="password")
+            submit = st.form_submit_button("Log In")
+            if submit:
+                if valid_credentials(email.lower().strip(), password):
+                    st.session_state["email"] = email.lower().strip()
+                    st.experimental_rerun()
+                else:
+                    st.error("Invalid email or password")
     st.header("🏆 Leaderboard")
     show_leaderboard()
     st.stop()
