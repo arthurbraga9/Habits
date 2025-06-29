@@ -7,6 +7,12 @@ PAGE_ICON = "🔥"
 CUTOFF_HOUR = 4
 
 ACTIVITIES = ["Sleep", "Workout", "Studying", "Anki"]
+WORKOUT_OPTIONS = {
+    "Strength": ["Upper Body", "Lower Body", "Full Body"],
+    "Cardio": ["Running", "Cycling", "Swimming"],
+    "Mobility": ["Yoga", "Stretching"],
+}
+CARDIO_METRICS = ["distance_km", "duration_min", "avg_hr"]
 DEFAULT_GOALS = {
     "Sleep": 7.0,
     "Workout": 150,

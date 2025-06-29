@@ -13,6 +13,7 @@ class User(Base):
     name = Column(String, default="")
     strava_token = Column(String, nullable=True)
     garmin_token = Column(String, nullable=True)
+    apple_token = Column(String, nullable=True)
     goals = relationship("Goal", back_populates="user", cascade="all, delete")
     logs = relationship("Log", back_populates="user", cascade="all, delete")
     followers = relationship("Follow", back_populates="followed", foreign_keys='Follow.followed_id')
@@ -72,3 +73,23 @@ def add_log(db_session, user: User, activity: str, value: float, timestamp: date
 
 def get_followed_user_ids(db_session, user: User):
     return [f.followed_id for f in user.following]
+
+
+def update_user_token(db_session, user: User, service: str, token: str):
+    if service == "strava":
+        user.strava_token = token
+    elif service == "garmin":
+        user.garmin_token = token
+    elif service == "apple":
+        user.apple_token = token
+    db_session.commit()
+
+
+def get_user_token(user: User, service: str):
+    if service == "strava":
+        return user.strava_token
+    if service == "garmin":
+        return user.garmin_token
+    if service == "apple":
+        return user.apple_token
+    return None
