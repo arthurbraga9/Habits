@@ -2,6 +2,7 @@
 import streamlit as st
 from datetime import datetime, date, time, timedelta
 import pandas as pd
+import os
 
 from config import (
     PAGE_TITLE,
@@ -20,17 +21,60 @@ import api
 # Display units for each activity
 UNITS = {
     "Sleep": "hours",
-    "Workout": "minutes",
-    "Studying": "hours",
+    "Running": "minutes",
+    "Walking": "minutes",
+    "Cycling": "minutes",
+    "Meditation": "minutes",
     "Anki": "flashcards",
+    "Strength Training": "minutes",
+    "Yoga": "minutes",
+    "Journaling": "minutes",
+    "Reading": "pages",
 }
 
 GOAL_UNITS = {
     "Sleep": "hours/day",
-    "Workout": "minutes/week",
-    "Studying": "hours/week",
+    "Running": "min/week",
+    "Walking": "min/week",
+    "Cycling": "min/week",
+    "Meditation": "min/day",
     "Anki": "flashcards/day",
+    "Strength Training": "min/week",
+    "Yoga": "min/week",
+    "Journaling": "min/day",
+    "Reading": "pages/day",
 }
+
+
+def render_leaderboard():
+    st.header("🏆 Leaderboard (Main Streak)")
+    users = db.query(User).all()
+    board = []
+    for u in users:
+        u_logs = db.query(Log).filter_by(user_id=u.id).all()
+        df_u = pd.DataFrame([
+            {"timestamp": l.timestamp, "activity": l.activity, "value": l.value}
+            for l in u_logs
+        ])
+        streak = 0
+        d = date.today()
+        while True:
+            ok = True
+            for act in ["Sleep", "Anki"]:
+                total = df_u[(df_u['timestamp'].dt.date == d) & (df_u['activity'] == act)]['value'].sum()
+                goal_val = next((g.target for g in u.goals if g.activity == act), 0)
+                if total < goal_val:
+                    ok = False
+            week_start = pd.Timestamp(d - timedelta(days=6)).normalize()
+            workout_total = df_u[(df_u['timestamp'] >= week_start) & (df_u['timestamp'] < pd.Timestamp(d + timedelta(days=1))) & (df_u['activity'] == "Running")]['value'].sum()
+            workout_goal = next((g.target for g in u.goals if g.activity == "Running"), 0)
+            if not ok or workout_total < workout_goal:
+                break
+            streak += 1
+            d -= timedelta(days=1)
+        board.append({"User": u.name or u.email, "MainStreak": streak})
+    df_board = pd.DataFrame(board).sort_values("MainStreak", ascending=False)
+    st.table(df_board.head(10))
 
 
 def login_with_google():
@@ -53,6 +97,7 @@ def logout():
 
 init_db()
 db = SessionLocal()
+os.makedirs("uploads", exist_ok=True)
 
 st.set_page_config(page_title=PAGE_TITLE, page_icon=PAGE_ICON, layout='wide')
 
@@ -83,6 +128,7 @@ else:
 
 email, name = login_with_google()
 if not email:
+    render_leaderboard()
     st.stop()
 
 user = get_user_by_email(db, email)
@@ -146,7 +192,11 @@ with tabs[0]:
     log_date = st.date_input("Date", date.today(), key="log_date")
     activity = st.selectbox("Activity", ACTIVITIES)
     unit = UNITS.get(activity, "units")
-    if unit == "hours":
+    distance = None
+    if activity in ["Running", "Walking", "Cycling"]:
+        value = st.number_input("Duration (minutes)", min_value=0, step=1)
+        distance = st.number_input("Distance (kilometers)", min_value=0.0, step=0.1)
+    elif unit == "hours":
         value = st.number_input("Duration (hours)", min_value=0.0, step=0.5)
     elif unit == "minutes":
         value = st.number_input("Duration (minutes)", min_value=0, step=1)
@@ -167,7 +217,7 @@ with tabs[0]:
             proof_path = f"uploads/{file_name}"
             with open(proof_path, "wb") as f:
                 f.write(proof.getbuffer())
-            add_log(db, user, activity, value, timestamp, proof_path)
+            add_log(db, user, activity, value, timestamp, proof_path, distance)
             st.success("Activity logged!")
             st.experimental_rerun()
 
@@ -175,13 +225,18 @@ with tabs[1]:
     st.header("Dashboard")
     logs = db.query(Log).filter_by(user_id=user.id).all()
     df_logs = pd.DataFrame([
-        {"timestamp": log.timestamp, "activity": log.activity, "value": log.value}
+        {
+            "timestamp": log.timestamp,
+            "activity": log.activity,
+            "value": log.value,
+            "distance": log.distance,
+        }
         for log in logs
     ])
     today = date.today()
     compliance = {}
     streaks = {}
-    for act in ["Sleep", "Anki"]:
+    for act in ["Sleep", "Meditation", "Anki", "Journaling", "Reading"]:
         count_met = 0
         s = 0
         d = today
@@ -197,7 +252,7 @@ with tabs[1]:
                 s += 1
         compliance[act] = round(count_met / 7 * 100, 1)
         streaks[act] = s
-    for act in ["Workout", "Studying"]:
+    for act in ["Running", "Walking", "Cycling", "Strength Training", "Yoga"]:
         weekly_totals = []
         for w in range(12):
             start = pd.Timestamp(today - timedelta(days=7*w + 6)).normalize()
@@ -230,9 +285,9 @@ with tabs[1]:
         weekly_total = df_logs[
             (df_logs['timestamp'] >= weekly_start) &
             (df_logs['timestamp'] < pd.Timestamp(day + timedelta(days=1))) &
-            (df_logs['activity'] == "Workout")
+            (df_logs['activity'] == "Running")
         ]['value'].sum()
-        workout_goal = next((g.target for g in user.goals if g.activity == "Workout"), 0)
+        workout_goal = next((g.target for g in user.goals if g.activity == "Running"), 0)
         if daily_ok and weekly_total >= workout_goal:
             main_streak += 1
             day -= timedelta(days=1)
@@ -264,7 +319,10 @@ with tabs[2]:
             with st.container():
                 st.subheader(f"{log_user.name or log_user.email} - {log.activity}")
                 unit = UNITS.get(log.activity, "units")
-                st.write(f"Value: {log.value} {unit}")
+                val_str = f"{log.value} {unit}"
+                if log.distance is not None:
+                    val_str += f", {log.distance} km"
+                st.write(f"Value: {val_str}")
                 if log.proof_url:
                     st.image(log.proof_url, caption="Proof", use_column_width=True)
                 cheers_key = f"cheer_{log.id}"
@@ -287,43 +345,13 @@ with tabs[3]:
             u = db.query(User).get(log.user_id)
             st.subheader(f"{u.name or u.email} - {log.activity}")
             unit = UNITS.get(log.activity, "units")
-            st.write(f"Value: {log.value} {unit}")
+            val_str = f"{log.value} {unit}"
+            if log.distance is not None:
+                val_str += f", {log.distance} km"
+            st.write(f"Value: {val_str}")
             if log.proof_url:
                 st.image(log.proof_url, use_column_width=True)
             st.write(f"Cheers: {log.cheers}")
 
 with tabs[4]:
-    st.header("🏆 Leaderboard (Main Streak)")
-    users = db.query(User).all()
-    board = []
-    for u in users:
-        u_logs = db.query(Log).filter_by(user_id=u.id).all()
-        df_u = pd.DataFrame([
-            {"timestamp": l.timestamp, "activity": l.activity, "value": l.value}
-            for l in u_logs
-        ])
-        streak = 0
-        d = date.today()
-        while True:
-            ok = True
-            for act in ["Sleep", "Anki"]:
-                total = df_u[
-                    (df_u['timestamp'].dt.date == d) & (df_u['activity'] == act)
-                ]['value'].sum()
-                goal_val = next((g.target for g in u.goals if g.activity == act), 0)
-                if total < goal_val:
-                    ok = False
-            week_start = pd.Timestamp(d - timedelta(days=6)).normalize()
-            workout_total = df_u[
-                (df_u['timestamp'] >= week_start) &
-                (df_u['timestamp'] < pd.Timestamp(d + timedelta(days=1))) &
-                (df_u['activity'] == "Workout")
-            ]['value'].sum()
-            workout_goal = next((g.target for g in u.goals if g.activity == "Workout"), 0)
-            if not ok or workout_total < workout_goal:
-                break
-            streak += 1
-            d -= timedelta(days=1)
-        board.append({"User": u.name or u.email, "MainStreak": streak})
-    df_board = pd.DataFrame(board).sort_values("MainStreak", ascending=False)
-    st.table(df_board.head(10))
+    render_leaderboard()

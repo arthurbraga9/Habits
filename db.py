@@ -33,6 +33,7 @@ class Log(Base):
     user_id = Column(Integer, ForeignKey('users.id'))
     activity = Column(String)
     value = Column(Float)
+    distance = Column(Float, nullable=True)
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
     proof_url = Column(String, nullable=True)
     cheers = Column(Integer, default=0)
@@ -65,8 +66,15 @@ def create_user(db_session, email: str, name: str = ""):
     db_session.commit()
     return user
 
-def add_log(db_session, user: User, activity: str, value: float, timestamp: datetime, proof_path: str = None):
-    log = Log(user_id=user.id, activity=activity, value=value, timestamp=timestamp, proof_url=proof_path)
+def add_log(db_session, user: User, activity: str, value: float, timestamp: datetime, proof_path: str = None, distance: float = None):
+    log = Log(
+        user_id=user.id,
+        activity=activity,
+        value=value,
+        distance=distance,
+        timestamp=timestamp,
+        proof_url=proof_path,
+    )
     db_session.add(log)
     db_session.commit()
     return log
