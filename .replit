@@ -1,8 +1,8 @@
-run = "python cli.py"
+run = "streamlit run main.py"
 modules = ["python-3.12", "bash"]
 
 [deployment]
-run = ["python", "cli.py"]
+run = ["streamlit", "run", "main.py"]
 
 [nix]
 channel = "stable-24_05"

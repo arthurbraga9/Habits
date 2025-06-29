@@ -64,6 +64,16 @@ mkdir uploads
    python cli.py
    ```
 
+## 🚀 Running on Replit
+
+1. Open this repository in [Replit](https://replit.com/).
+2. The `.replit` file launches the Streamlit interface:
+   ```bash
+   streamlit run main.py
+   ```
+3. Install dependencies from `requirements.txt` if prompted.
+4. The interface will be served at the Replit preview URL and uses Replit DB for storage.
+
 ---
 
 ## 👥 Inviting Friends
