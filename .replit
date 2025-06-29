@@ -1,16 +1,1 @@
-entrypoint = "main.py"
-modules = ["python-3.11"]
-
-[workflows]
-runButton = "Streamlit"
-[[workflows.workflow]]
-name = "Streamlit"
-mode = "sequential"
-author = 12345678
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "streamlit run main.py --server.address 0.0.0.0 --server.port 8501 --server.enableCORS false"
-
-[[ports]]
-localPort = 8501
-externalPort = 80
+run = "streamlit run main.py --server.port 5000"
