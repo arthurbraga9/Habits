@@ -28,16 +28,19 @@ else:
 # Dynamically import all modules under the project so helper files can be placed
 # anywhere without manual imports.
 BASE_DIR = Path(__file__).parent
+# Skip Streamlit entrypoints so importing them doesn't trigger optional
+# kqueue-based watchers on platforms lacking those APIs.
+EXCLUDE = {"main.py", "bootstrap.py", "app.py", "habits_tracker_web.py", "__init__.py"}
 for py_file in BASE_DIR.rglob("*.py"):
-    if py_file.name not in ("main.py", "bootstrap.py", "app.py", "__init__.py"):
+    if py_file.name not in EXCLUDE:
         module_name = ".".join(py_file.relative_to(BASE_DIR).with_suffix("").parts)
         spec = importlib.util.spec_from_file_location(module_name, py_file)
         module = importlib.util.module_from_spec(spec)
         sys.modules[module_name] = module
         try:
             spec.loader.exec_module(module)
-        except (ModuleNotFoundError, ImportError) as e:
-            print(f"Skipping module {module_name} due to missing dependency: {e}")
+        except (ModuleNotFoundError, ImportError, AttributeError) as e:
+            print(f"Skipping module {module_name} due to import error: {e}")
 
 # Load any assets placed in a `data/` folder so data files work on Replit or
 # locally.
