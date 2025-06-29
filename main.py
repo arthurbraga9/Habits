@@ -32,7 +32,7 @@ BASE_DIR = Path(__file__).parent
 # kqueue-based watchers on platforms lacking those APIs.
 EXCLUDE = {"main.py", "bootstrap.py", "app.py", "habits_tracker_web.py", "__init__.py"}
 for py_file in BASE_DIR.rglob("*.py"):
-    if py_file.name not in EXCLUDE:
+    if py_file.name not in EXCLUDE and not any(part.startswith(".") for part in py_file.relative_to(BASE_DIR).parts):
         module_name = ".".join(py_file.relative_to(BASE_DIR).with_suffix("").parts)
         spec = importlib.util.spec_from_file_location(module_name, py_file)
         module = importlib.util.module_from_spec(spec)
