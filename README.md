@@ -1,6 +1,6 @@
 # Habits! 🔥🔪
 
-A social, proof-based habit tracker built with Streamlit.  
+A simple, proof-based habit tracker that runs in the console.
 Track **Sleep**, **Workout**, **Studying** and **Anki** sessions, upload proof screenshots, and compete on leaderboards & sub-streaks.
 
 ---
@@ -27,7 +27,7 @@ Track **Sleep**, **Workout**, **Studying** and **Anki** sessions, upload proof s
 
 - **Python ≥ 3.9**  
 - **Git** & **GitHub CLI** (optional but recommended)  
-- **Streamlit**, **pandas**
+- **pandas**
 
 ---
 
@@ -61,60 +61,19 @@ mkdir uploads
 5. **Run the app**:
 
    ```bash
-   streamlit run app.py
+   python cli.py
    ```
-
-6. **Visit** `http://localhost:8501` in your browser.
-
----
-
-## ☁️ Deploy to Streamlit Community Cloud
-
-1. **Push** your code to GitHub (if not already):
-
-   ```bash
-   git add .
-   git commit -m "Initial release"
-   git push origin main
-   ```
-
-2. **Go to** [share.streamlit.io](https://share.streamlit.io) → **Deploy an app**.
-
-3. **Connect** your GitHub repo, select `main` branch, set **Main file** to:
-
-   ```
-   app.py
-   ```
-
-4. Click **Deploy** → share the generated URL with friends!
-
-## 🔑 Secrets & Environment Variables
-Use a `.streamlit/secrets.toml` file to store credentials like database URLs or API keys. For example:
-
-```toml
-DATABASE_URL = "sqlite:///./habits.db"
-GOOGLE_CLIENT_ID = "your-google-client-id"
-GOOGLE_CLIENT_SECRET = "your-google-client-secret"
-STRAVA_CLIENT_ID = "your-strava-client-id"
-STRAVA_CLIENT_SECRET = "your-strava-client-secret"
-```
-
-When deployed on Streamlit Community Cloud, values from `secrets.toml` are loaded into environment variables and accessible via `os.getenv`.
-See `.streamlit/secrets.toml.example` for a template.
-
 
 ---
 
 ## 👥 Inviting Friends
 
-1. Share your Streamlit URL.
+1. Share your progress with friends.
 2. Each friend:
-
-   * **Create** a new player profile in the sidebar.
-   * **Customize** daily goals & days-off.
-   * **Log** activities with proof.
-   * **Follow** others to see their feed & cheer them on.
-
+   * **Create** a new profile using the CLI.
+   * **Customize** daily goals.
+   * **Log** activities.
+   * **Review** each other's progress.
 ---
 
 ## ⚙️ Customization & Extensions
@@ -130,8 +89,7 @@ See `.streamlit/secrets.toml.example` for a template.
 
 * **Data persistence** uses SQLite. Consider PostgreSQL and S3 for production.
 * **No authentication**—anyone can impersonate. Add OAuth2 or email/password login for security.
-* **Single-page Streamlit UI** limits full mobile app features; consider a React Native wrapper for push notifications.
-
+* The CLI interface is minimal; consider building a web UI for more features.
 ---
 
 ## 🤝 Contributing
