@@ -21,3 +21,8 @@ def fetch_strava_activities(access_token: str, after: datetime.datetime = None):
 def fetch_garmin_sleep_data(access_token: str, date: datetime.date):
     """Stub: fetch sleep data from Garmin."""
     return {"date": date.isoformat(), "sleep_hours": 7.5}
+
+
+def fetch_apple_health_data(token: str, start: datetime.datetime, end: datetime.datetime):
+    """Stub: fetch workout data from Apple Health."""
+    return []

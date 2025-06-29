@@ -92,3 +92,20 @@ def add_friend(user_id, friend_id):
     if friend_id not in profile['friends']:
         profile['friends'].append(friend_id)
     db[key] = profile
+
+
+def update_service_token(user_id, service, token):
+    key = f"user:{user_id}:profile"
+    profile = db.get(key, {})
+    services = profile.get('services', {})
+    if token:
+        services[service] = token
+    else:
+        services.pop(service, None)
+    profile['services'] = services
+    db[key] = profile
+
+
+def get_service_token(user_id, service):
+    profile = db.get(f"user:{user_id}:profile", {})
+    return profile.get('services', {}).get(service)
