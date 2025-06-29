@@ -1,1 +1,16 @@
-{ "players": {} }
+{
+  "players": {},
+  "users": {
+    "arthurbraga682@gmail.com": {
+      "name": "arthurbraga682",
+      "goals": {
+        "Sleep": 7.0,
+        "Workout": 150,
+        "Studying": 10.0,
+        "Anki": 1
+      },
+      "logs": [],
+      "follows": []
+    }
+  }
+}

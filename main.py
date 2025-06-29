@@ -21,11 +21,30 @@ else:
 
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Bootstrap the environment. This installs any missing dependencies listed in
+# ``requirements.txt`` and initializes the SQLite database.  This allows the
+# application to run even when executed on a fresh environment (e.g. Replit)
+# without the user having to manually install packages first.
+# ---------------------------------------------------------------------------
+try:
+    from bootstrap import bootstrap
+except Exception as exc:  # pragma: no cover - bootstrap should always exist
+    print(f"Failed to import bootstrap utility: {exc}")
+else:
+    bootstrap()
+
+# ---------------------------------------------------------------------------
+
 # Dynamically import all modules under the project so helper files can be placed
 # anywhere without manual imports.
 BASE_DIR = Path(__file__).parent
 for py_file in BASE_DIR.rglob("*.py"):
+ i0gczj-codex/corrigir-erro-de-importerror-em-db
     if py_file.name not in ("main.py", "bootstrap.py", "app.py", "__init__.py"):
+
+    if py_file.name not in ("main.py", "bootstrap.py", "__init__.py"):
+        main
         module_name = ".".join(py_file.relative_to(BASE_DIR).with_suffix("").parts)
         spec = importlib.util.spec_from_file_location(module_name, py_file)
         module = importlib.util.module_from_spec(spec)
